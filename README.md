@@ -2,7 +2,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BBS 簡潔專業版</title>
+    <title>BBS 專業評估 (含導出功能)</title>
     <style>
         :root { --primary: #2c3e50; --secondary: #3498db; --low: #27ae60; --mid: #f39c12; --high: #e74c3c; }
         body { font-family: -apple-system, "Microsoft JhengHei", sans-serif; background: #f0f2f5; margin: 0; padding: 10px; display: flex; justify-content: center; }
@@ -19,13 +19,15 @@
         .side-selector { display: flex; gap: 5px; margin-bottom: 10px; }
         .side-btn { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 5px; background: #f8f9fa; cursor: pointer; font-size: 0.9rem; }
         .side-btn.active { background: var(--primary); color: white; }
-        .nav-btns { display: flex; gap: 10px; margin-top: 20px; }
-        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .nav-btns { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; min-width: 120px; }
         .btn-next { background: var(--primary); color: white; }
         .btn-prev { background: #bdc3c7; color: white; }
+        .btn-export { background: #27ae60; color: white; }
+        .btn-email { background: #8e44ad; color: white; }
         .total-score { font-size: 3rem; font-weight: bold; text-align: center; margin: 5px 0; }
         .risk-banner { font-size: 1.3rem; padding: 12px; border-radius: 8px; color: white; text-align: center; font-weight: bold; margin-bottom: 15px; }
-        table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
+        table { width: 100%; font-size: 0.85rem; border-collapse: collapse; margin-bottom: 20px; }
         td, th { border: 1px solid #eee; padding: 8px; text-align: left; }
         th { background: #f8f9fa; }
     </style>
@@ -35,6 +37,10 @@
 <div class="app-container">
     <div class="section active" id="sec-1">
         <h2>基本資料</h2>
+        <div style="margin-bottom:15px;">
+            <label>預設接收 Email</label>
+            <input type="email" id="target_email" value="your-email@example.com" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+        </div>
         <div style="margin-bottom:15px;">
             <label>病歷號</label>
             <input type="text" id="p_id" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
@@ -56,13 +62,17 @@
         <div id="res_risk" class="risk-banner"></div>
         <div class="total-score" id="res_total">0</div>
         <div style="text-align:center; color:#7f8c8d; margin-bottom:15px;">BBS 總積分</div>
+        
         <table id="res_table">
             <thead><tr><th>項目</th><th>分</th><th>備註</th></tr></thead>
             <tbody></tbody>
         </table>
+
         <div class="nav-btns">
+            <button class="btn btn-export" onclick="downloadCSV()">下載所有歷史 Excel (CSV)</button>
+            <button class="btn btn-email" onclick="sendEmail()">發送此報告至 Email</button>
             <button class="btn btn-prev" onclick="go(15)">回上項修改</button>
-            <button class="btn btn-next" style="background:#27ae60" onclick="location.reload()">存檔重置</button>
+            <button class="btn btn-next" style="background:#27ae60" onclick="saveAndReset()">存檔並重置</button>
         </div>
     </div>
 </div>
@@ -94,12 +104,12 @@
             const div = document.createElement('div');
             div.className = 'section'; div.id = `sec-${secNum}`;
             let specialUI = "";
-            if(item.side) specialUI = `<div class="side-selector"><button class="side-btn active" onclick="setSide(this)">向左轉</button><button class="side-btn" onclick="setSide(this)">向右轉</button></div>`;
-            if(item.foot) specialUI = `<div class="side-selector"><button class="side-btn active" onclick="setSide(this)">左腳在後</button><button class="side-btn" onclick="setSide(this)">右腳在後</button></div>`;
+            if(item.side) specialUI = `<div class="side-selector"><button class="side-btn active">向左轉</button><button class="side-btn">向右轉</button></div>`;
+            if(item.foot) specialUI = `<div class="side-selector"><button class="side-btn active">左腳在後</button><button class="side-btn">右腳在後</button></div>`;
             if(item.compare) specialUI = `<div class="side-selector"><button class="side-btn" id="l-leg" onclick="markL('L')">記錄左腳</button><button class="side-btn" id="r-leg" onclick="markL('R')">記錄右腳</button></div>`;
             
             div.innerHTML = `
-                <div class="progress">項目 ${idx + 1} / 14</div>
+                <div class="progress">項目評估 ${idx + 1} / 14</div>
                 <h2>${item.name}</h2>
                 <div class="eval-ui">
                     ${item.type === 'timer' ? `<div class="timer-display" id="disp-${item.id}">0.0s</div><button class="btn" style="background:#3498db; color:white;" onclick="startC(${item.id})">計時</button> <button class="btn" style="background:#e67e22; color:white;" onclick="stopC(${item.id})">停止</button>` : ''}
@@ -117,14 +127,14 @@
     }
 
     function go(n) { document.querySelectorAll('.section').forEach(s => s.classList.remove('active')); document.getElementById(`sec-${n}`).classList.add('active'); window.scrollTo(0,0); }
-    function setSide(b) { b.parentElement.querySelectorAll('.side-btn').forEach(x => x.classList.remove('active')); b.classList.add('active'); }
-    function markL(s) { const t = parseFloat(document.getElementById('disp-14').innerText); legD[s] = t; document.getElementById(s === 'L' ? 'l-leg' : 'r-leg').innerText = (s==='L'?'左':'右')+t+"s"; currentT[14] = `左${legD.L}s/右${legD.R}s (取小者:${Math.min(legD.L||999, legD.R||999)}s)`; }
+    function markL(s) { const t = parseFloat(document.getElementById('disp-14').innerText); legD[s] = t; document.getElementById(s === 'L' ? 'l-leg' : 'r-leg').innerText = (s==='L'?'左':'右')+t+"s"; currentT[14] = `左${legD.L}s/右${legD.R}s`; }
     function startC(id) { const start = Date.now(); if(runT[id]) clearInterval(runT[id]); runT[id] = setInterval(() => { const t = ((Date.now() - start) / 1000).toFixed(1); document.getElementById(`disp-${id}`).innerText = t + 's'; currentT[id] = t + 's'; }, 100); }
     function stopC(id) { clearInterval(runT[id]); }
     function recS(id, v) { currentS[id] = v; document.querySelectorAll(`#sec-${id+1} .score-btn`).forEach(b => b.classList.remove('active')); document.getElementById(`btn-${id}-${v}`).classList.add('active'); }
+
     function showR() {
         let tot = 0; let tb = "";
-        bbsData.forEach(item => { const v = currentS[item.id] || 0; tot += v; tb += `<tr><td>${item.name}</td><td>${v}</td><td>${currentT[item.id] || '-'}</td></tr>`; });
+        bbsData.forEach(item => { const v = currentS[item.id] || 0; tot += v; tb += `<tr><td>${item.id}. ${item.name.split('. ')[1]}</td><td>${v}</td><td>${currentT[item.id] || '-'}</td></tr>`; });
         document.getElementById('res_p_info').innerText = `病歷號：${document.getElementById('p_id').value || '未填'} | 類型：${document.getElementById('p_type').value}`;
         document.getElementById('res_total').innerText = tot;
         const b = document.getElementById('res_risk');
@@ -134,6 +144,57 @@
         document.querySelector('#res_table tbody').innerHTML = tb;
         go(16);
     }
+
+    // 儲存至本地並導出 CSV
+    function saveAndReset() {
+        const pId = document.getElementById('p_id').value || "Unknown";
+        const tot = document.getElementById('res_total').innerText;
+        const risk = document.getElementById('res_risk').innerText;
+        const record = { date: new Date().toLocaleString(), id: pId, score: tot, risk: risk };
+        
+        let history = JSON.parse(localStorage.getItem('bbs_v2_history') || '[]');
+        history.push(record);
+        localStorage.setItem('bbs_v2_history', JSON.stringify(history));
+        
+        alert("評估已存檔！");
+        location.reload();
+    }
+
+    function downloadCSV() {
+        const history = JSON.parse(localStorage.getItem('bbs_v2_history') || '[]');
+        if (history.length === 0) { alert("目前沒有歷史紀錄可匯出"); return; }
+        
+        let csvContent = "\uFEFF日期,病歷號,總分,風險\n";
+        history.forEach(r => { csvContent += `${r.date},${r.id},${r.score},${r.risk}\n`; });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute("download", `BBS_History_${new Date().toLocaleDateString()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function sendEmail() {
+        const email = document.getElementById('target_email').value;
+        const pId = document.getElementById('p_id').value;
+        const tot = document.getElementById('res_total').innerText;
+        const risk = document.getElementById('res_risk').innerText;
+        
+        let body = `BBS 評估報告\n`;
+        body += `病歷號: ${pId}\n`;
+        body += `總分: ${tot} / 56\n`;
+        body += `風險等級: ${risk}\n\n`;
+        body += `詳細記錄:\n`;
+        bbsData.forEach(item => {
+            body += `${item.id}. ${item.name.split('. ')[1]}: ${currentS[item.id] || 0}分 (${currentT[item.id] || '-'})\n`;
+        });
+
+        const mailtoLink = `mailto:${email}?subject=BBS評估報告_${pId}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+    }
+
     init();
 </script>
 </body>
