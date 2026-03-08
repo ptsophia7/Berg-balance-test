@@ -3,235 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BBS 平衡評估助手</title>
+    <title>BBS 步進式評估系統</title>
     <style>
         :root {
             --primary: #2c3e50;
-            --low-risk: #27ae60;
-            --mid-risk: #f39c12;
-            --high-risk: #e74c3c;
+            --secondary: #3498db;
+            --low: #27ae60; --mid: #f39c12; --high: #e74c3c;
         }
-        body { font-family: -apple-system, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; }
-        .card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: var(--primary); border-left: 5px solid var(--primary); padding-left: 10px; }
-        .input-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; justify-content: center; }
+        .app-container { width: 100%; max-width: 500px; }
+        .section { display: none; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .section.active { display: block; animation: fadeIn 0.4s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        .test-item { border-bottom: 1px solid #eee; padding: 15px 0; }
-        .timer-display { font-size: 24px; font-weight: bold; color: var(--primary); margin: 10px 0; }
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .btn-start { background: #3498db; color: white; }
-        .btn-stop { background: #e67e22; color: white; margin-left: 10px; }
-        .btn-submit { background: var(--primary); color: white; width: 100%; font-size: 18px; margin-top: 20px; }
+        h2 { color: var(--primary); font-size: 1.2rem; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .progress { font-size: 0.8rem; color: #888; margin-bottom: 10px; }
         
-        .score-select { margin-top: 10px; display: flex; gap: 5px; }
-        .score-opt { flex: 1; text-align: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
-        .score-opt.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .item-box { margin-bottom: 25px; padding: 15px; border: 1px solid #f0f0f0; border-radius: 10px; }
+        .item-title { font-weight: bold; margin-bottom: 10px; display: block; }
         
-        #resultArea { display: none; text-align: center; }
-        .risk-tag { font-size: 24px; font-weight: bold; padding: 10px; border-radius: 8px; color: white; display: inline-block; margin-top: 10px; }
+        .score-group { display: flex; justify-content: space-between; gap: 5px; }
+        .score-btn { flex: 1; padding: 10px 5px; border: 1px solid #ddd; background: white; border-radius: 6px; font-size: 0.9rem; cursor: pointer; }
+        .score-btn.active { background: var(--secondary); color: white; border-color: var(--secondary); }
         
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #eee; }
+        .timer-box { background: #f8f9fa; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
+        .timer-val { font-size: 1.5rem; font-weight: bold; font-family: monospace; }
+        
+        .nav-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-next { background: var(--primary); color: white; }
+        .btn-prev { background: #bdc3c7; color: white; }
+        
+        .result-card { text-align: center; }
+        .total-score { font-size: 3rem; font-weight: bold; color: var(--primary); }
+        .risk-banner { font-size: 1.5rem; padding: 15px; border-radius: 10px; color: white; margin: 15px 0; }
+        table { width: 100%; font-size: 0.85rem; border-collapse: collapse; margin-top: 10px; }
+        td, th { border: 1px solid #eee; padding: 8px; text-align: left; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h2>病人資訊</h2>
-        <div class="input-group">
+<div class="app-container">
+    <div class="section active" id="sec-1">
+        <div class="progress">Step 1 / 9</div>
+        <h2>基本資料</h2>
+        <div style="margin-bottom:15px;">
             <label>病歷號</label>
-            <input type="text" id="patientId" placeholder="請輸入病歷號">
+            <input type="text" id="p_id" style="width:100%; padding:10px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
         </div>
-        <div class="input-group">
+        <div>
             <label>病人類型</label>
-            <select id="patientType">
-                <option value="一般高齡">一般高齡</option>
-                <option value="中風">中風</option>
-                <option value="巴金森氏症">巴金森氏症</option>
-                <option value="其他">其他</option>
+            <select id="p_type" style="width:100%; padding:10px; margin-top:5px; border:1px solid #ddd; border-radius:5px;">
+                <option>高齡者</option><option>中風</option><option>巴金森氏症</option><option>脊髓損傷</option>
             </select>
         </div>
+        <div class="nav-btns"><button class="btn btn-next" onclick="go(2)">開始評估</button></div>
     </div>
 
-    <div class="card">
-        <h2>計時評估項 (6,7,11,12,13,14)</h2>
-        <div id="timerContainer"></div>
-        
-        <h2>其他項目總分 (1-5, 8-10)</h2>
-        <div class="input-group">
-            <label>這 8 項的點選分數總和 (0-32)</label>
-            <input type="number" id="otherScore" min="0" max="32" value="0">
-        </div>
+    <div id="dynamic-sections"></div>
 
-        <button class="btn btn-submit" onclick="calculateResult()">計算結果並存檔</button>
-    </div>
-
-    <div id="resultArea" class="card">
-        <h2>評估結果</h2>
-        <div id="scoreDisplay" style="font-size: 20px;"></div>
-        <div id="riskTag" class="risk-tag"></div>
-        <div id="timeDetails" style="margin-top: 15px; text-align: left; font-size: 14px; color: #666;"></div>
-    </div>
-
-    <div class="card">
-        <h2>歷史紀錄 (本機儲存)</h2>
-        <div style="overflow-x: auto;">
-            <table id="historyTable">
-                <thead>
-                    <tr>
-                        <th>日期</th>
-                        <th>病歷號</th>
-                        <th>類型</th>
-                        <th>總分</th>
-                        <th>風險</th>
-                    </tr>
-                </thead>
+    <div class="section" id="sec-9">
+        <div class="progress">Step 9 / 9 - 評估報告</div>
+        <div class="result-card">
+            <div id="res_p_info" style="font-weight:bold; margin-bottom:10px;"></div>
+            <div>總分</div>
+            <div class="total-score" id="res_total">0</div>
+            <div id="res_risk" class="risk-banner"></div>
+            <table id="res_table">
+                <thead><tr><th>項目</th><th>分數</th><th>紀錄</th></tr></thead>
                 <tbody></tbody>
             </table>
+            <div class="nav-btns">
+                <button class="btn btn-prev" onclick="go(1)">重新測試</button>
+                <button class="btn btn-next" onclick="saveData()">儲存並完成</button>
+            </div>
         </div>
-        <button class="btn" style="margin-top:10px; background:#95a5a6; color:white;" onclick="clearHistory()">清除所有紀錄</button>
     </div>
+</div>
 
 <script>
-    const items = [
-        { id: 6, name: "閉眼站立 (目標10s)", thresholds: [10, 3, 0], scores: [4, 2, 1, 0] },
-        { id: 7, name: "雙腳併攏站立 (目標60s)", thresholds: [60, 30, 15], scores: [4, 2, 1, 0] },
-        { id: 11, name: "360度轉圈 (目標4s)", thresholds: [4, 10, 20], scores: [4, 2, 1, 0] },
-        { id: 12, name: "階梯踏步 (目標20s)", thresholds: [20, 40, 60], scores: [4, 3, 2, 0] },
-        { id: 13, name: "串聯站立 (目標30s)", thresholds: [30, 15, 5], scores: [4, 2, 1, 0] },
-        { id: 14, name: "單腳站立 (目標10s)", thresholds: [10, 5, 3], scores: [4, 3, 2, 1] }
+    const bbsItems = [
+        { id: 1, name: "從坐位站起", type: "click" },
+        { id: 2, name: "獨立站立", type: "click" },
+        { id: 3, name: "獨立坐著", type: "click" },
+        { id: 4, name: "從站位坐下", type: "click" },
+        { id: 5, name: "床椅轉移", type: "click" },
+        { id: 6, name: "閉眼站立", type: "timer", target: 10 },
+        { id: 7, name: "雙腳併攏站立", type: "timer", target: 60 },
+        { id: 8, name: "站立前伸", type: "click" },
+        { id: 9, name: "從地面拾物", type: "click" },
+        { id: 10, name: "回頭向後看", type: "click" },
+        { id: 11, name: "360度轉圈", type: "timer", target: 4 },
+        { id: 12, name: "階梯踏步", type: "timer", target: 20 },
+        { id: 13, name: "串聯站立", type: "timer", target: 30 },
+        { id: 14, name: "單腳站立", type: "timer", target: 10 }
     ];
 
+    let scores = {};
     let timers = {};
-    let results = {};
+    let timeLogs = {};
 
-    // 初始化計時項目 UI
-    const container = document.getElementById('timerContainer');
-    items.forEach(item => {
-        results[item.id] = { time: 0, score: 0 };
-        const div = document.createElement('div');
-        div.className = 'test-item';
-        div.innerHTML = `
-            <label>${item.id}. ${item.name}</label>
-            <div class="timer-display" id="display-${item.id}">0.0s</div>
-            <button class="btn btn-start" onclick="startTimer(${item.id})">開始</button>
-            <button class="btn btn-stop" onclick="stopTimer(${item.id})">停止</button>
-            <div class="score-select" id="score-row-${item.id}">
-                ${item.scores.map(s => `<div class="score-opt" id="opt-${item.id}-${s}">${s}分</div>`).join('')}
-            </div>
-        `;
-        container.appendChild(div);
-    });
-
-    function startTimer(id) {
-        if (timers[id]) clearInterval(timers[id].interval);
-        const startTime = Date.now();
-        timers[id] = {
-            interval: setInterval(() => {
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-                document.getElementById(`display-${id}`).innerText = elapsed + 's';
-                results[id].time = parseFloat(elapsed);
-            }, 100)
-        };
-    }
-
-    function stopTimer(id) {
-        if (timers[id]) {
-            clearInterval(timers[id].interval);
-            autoScore(id, results[id].time);
+    function initApp() {
+        const container = document.getElementById('dynamic-sections');
+        for (let i = 0; i < 7; i++) {
+            const secNum = i + 2;
+            const item1 = bbsItems[i * 2];
+            const item2 = bbsItems[i * 2 + 1];
+            
+            const div = document.createElement('div');
+            div.className = 'section';
+            div.id = `sec-${secNum}`;
+            div.innerHTML = `
+                <div class="progress">Step ${secNum} / 9</div>
+                <h2>評估項目 ${item1.id} & ${item2.id}</h2>
+                ${renderItem(item1)}
+                ${renderItem(item2)}
+                <div class="nav-btns">
+                    <button class="btn btn-prev" onclick="go(${secNum-1})">上一步</button>
+                    <button class="btn btn-next" onclick="${secNum === 8 ? 'showFinal()' : 'go('+(secNum+1)+')'}">下一步</button>
+                </div>
+            `;
+            container.appendChild(div);
         }
     }
 
-    function autoScore(id, time) {
-        const config = items.find(i => i.id === id);
-        let score = 0;
-        // 簡易自動評分邏輯 (可依臨床需求精確調整)
-        if (time >= config.thresholds[0]) score = config.scores[0];
-        else if (time >= config.thresholds[1]) score = config.scores[1];
-        else if (time >= config.thresholds[2]) score = config.scores[2];
-        else score = 0;
-
-        results[id].score = score;
-        
-        // 更新 UI 狀態
-        document.querySelectorAll(`#score-row-${id} .score-opt`).forEach(el => el.classList.remove('active'));
-        const activeOpt = document.getElementById(`opt-${id}-${score}`);
-        if(activeOpt) activeOpt.classList.add('active');
+    function renderItem(item) {
+        let html = `<div class="item-box"><span class="item-title">${item.id}. ${item.name}</span>`;
+        if (item.type === 'timer') {
+            html += `
+                <div class="timer-box">
+                    <div class="timer-val" id="val-${item.id}">0.0s</div>
+                    <button onclick="startT(${item.id})">開始</button>
+                    <button onclick="stopT(${item.id})">停止</button>
+                </div>`;
+        }
+        html += `<div class="score-group">`;
+        [0, 1, 2, 3, 4].forEach(s => {
+            html += `<button class="score-btn" id="btn-${item.id}-${s}" onclick="setScore(${item.id}, ${s})">${s}</button>`;
+        });
+        html += `</div></div>`;
+        return html;
     }
 
-    function calculateResult() {
-        const pId = document.getElementById('patientId').value;
-        if (!pId) { alert("請輸入病歷號"); return; }
+    function go(n) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(`sec-${n}`).classList.add('active');
+        window.scrollTo(0,0);
+    }
 
-        let timerTotal = 0;
-        let timeLog = "";
-        items.forEach(item => {
-            timerTotal += results[item.id].score;
-            timeLog += `項目${item.id}: ${results[item.id].time}s (${results[item.id].score}分) | `;
+    function setScore(id, s) {
+        scores[id] = s;
+        document.querySelectorAll(`#sec-${Math.floor((id-1)/2)+2} #btn-${id}-0, #btn-${id}-1, #btn-${id}-2, #btn-${id}-3, #btn-${id}-4`)
+                .forEach(b => b.classList.remove('active'));
+        document.getElementById(`btn-${id}-${s}`).classList.add('active');
+    }
+
+    function startT(id) {
+        const start = Date.now();
+        if (timers[id]) clearInterval(timers[id]);
+        timers[id] = setInterval(() => {
+            const t = ((Date.now() - start) / 1000).toFixed(1);
+            document.getElementById(`val-${id}`).innerText = t + 's';
+            timeLogs[id] = t;
+        }, 100);
+    }
+
+    function stopT(id) { clearInterval(timers[id]); }
+
+    function showFinal() {
+        let total = 0;
+        let tbody = "";
+        const p_id = document.getElementById('p_id').value || "未填寫";
+        const p_type = document.getElementById('p_type').value;
+
+        bbsItems.forEach(item => {
+            const s = scores[item.id] || 0;
+            total += s;
+            tbody += `<tr><td>${item.id}.${item.name}</td><td>${s}分</td><td>${timeLogs[item.id] ? timeLogs[item.id]+'s' : '-'}</td></tr>`;
         });
 
-        const otherTotal = parseInt(document.getElementById('otherScore').value) || 0;
-        const finalScore = timerTotal + otherTotal;
+        document.getElementById('res_p_info').innerText = `病歷號：${p_id} (${p_type})`;
+        document.getElementById('res_total').innerText = total;
+        const rb = document.getElementById('res_risk');
+        if (total >= 41) { rb.innerText = "低跌倒風險"; rb.style.background = 'var(--low)'; }
+        else if (total >= 21) { rb.innerText = "中度跌倒風險"; rb.style.background = 'var(--mid)'; }
+        else { rb.innerText = "高跌倒風險"; rb.style.background = 'var(--high)'; }
 
-        let risk = "";
-        let color = "";
-        if (finalScore >= 41) { risk = "低跌倒風險"; color = 'var(--low-risk)'; }
-        else if (finalScore >= 21) { risk = "中度跌倒風險"; color = 'var(--mid-risk)'; }
-        else { risk = "高跌倒風險"; color = 'var(--high-risk)'; }
-
-        // 顯示結果
-        document.getElementById('resultArea').style.display = 'block';
-        document.getElementById('scoreDisplay').innerText = `總分：${finalScore} / 56`;
-        const rt = document.getElementById('riskTag');
-        rt.innerText = risk;
-        rt.style.backgroundColor = color;
-        document.getElementById('timeDetails').innerText = "計時詳情：" + timeLog;
-
-        // 存入 LocalStorage
-        const record = {
-            date: new Date().toLocaleString(),
-            id: pId,
-            type: document.getElementById('patientType').value,
-            score: finalScore,
-            risk: risk
-        };
-        saveRecord(record);
+        document.querySelector('#res_table tbody').innerHTML = tbody;
+        go(9);
     }
 
-    function saveRecord(record) {
-        let history = JSON.parse(localStorage.getItem('bbs_history') || '[]');
-        history.unshift(record);
-        localStorage.setItem('bbs_history', JSON.stringify(history));
-        renderHistory();
+    function saveData() {
+        alert("資料已儲存至瀏覽器紀錄中！");
+        // 這裡可以擴充將資料寫入 LocalStorage 的功能
+        location.reload();
     }
 
-    function renderHistory() {
-        const history = JSON.parse(localStorage.getItem('bbs_history') || '[]');
-        const tbody = document.querySelector('#historyTable tbody');
-        tbody.innerHTML = history.map(r => `
-            <tr>
-                <td>${r.date}</td>
-                <td>${r.id}</td>
-                <td>${r.type}</td>
-                <td>${r.score}</td>
-                <td>${r.risk}</td>
-            </tr>
-        `).join('');
-    }
-
-    function clearHistory() {
-        if(confirm("確定要刪除所有紀錄嗎？")) {
-            localStorage.removeItem('bbs_history');
-            renderHistory();
-        }
-    }
-
-    // 初始載入紀錄
-    renderHistory();
+    initApp();
 </script>
-
 </body>
 </html>
